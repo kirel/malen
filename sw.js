@@ -2,7 +2,8 @@ const CACHE_NAME = 'malen-drawing-app-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/logo.png'
 ];
 
 // Install event - cache resources

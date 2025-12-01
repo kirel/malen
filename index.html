@@ -142,11 +142,49 @@
     #deleteCountdown.show {
         display: block;
     }
+
+    #splashScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 1;
+        transition: opacity 0.5s ease-out;
+    }
+
+    #splashScreen.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    #splashScreen img {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 20px;
+    }
+
+    #splashScreen h1 {
+        font-size: 32px;
+        color: #333;
+        margin: 0;
+    }
 </style>
 ```
 
 </head>
 <body>
+    <div id="splashScreen">
+        <img src="logo.png" alt="Malen Logo">
+        <h1>Malen</h1>
+    </div>
+
     <canvas id="canvas"></canvas>
 
 ```
@@ -532,6 +570,15 @@
                 });
         });
     }
+
+    // Show splash screen and fade out after delay
+    const splashScreen = document.getElementById('splashScreen');
+    setTimeout(() => {
+        splashScreen.classList.add('hidden');
+        setTimeout(() => {
+            splashScreen.style.display = 'none';
+        }, 500); // Match transition duration
+    }, 1500); // Show for 1.5 seconds
 </script>
 ```
 
