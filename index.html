@@ -267,7 +267,7 @@
 </div>
 
 <div id="brushSizeControl">
-    <input type="range" id="brushSizeSlider" min="1" max="50" value="8">
+    <input type="range" id="brushSizeSlider" min="1" max="50" value="25">
 </div>
 
 <button id="clearButton">🗑️</button>
@@ -294,7 +294,7 @@
     let lastY = 0;
     let lastTime = 0;
     let currentLineWidth = 8;
-    let baseBrushSize = 8; // Default brush size
+    let baseBrushSize = 25; // Default brush size
     let deleteTimer = null;
     let deleteCountdownInterval = null;
 
@@ -326,7 +326,8 @@
             if (dist > 0.5) {
                 discard;
             }
-            float alpha = 1.0 - smoothstep(0.4, 0.5, dist);
+            // Widened smoothstep range for softer edges
+            float alpha = 1.0 - smoothstep(0.35, 0.5, dist); 
             gl_FragColor = vec4(v_color.rgb, v_color.a * alpha);
         }
     `;
@@ -507,7 +508,7 @@
         const dx = x2 - x1;
         const dy = y2 - y1;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const steps = Math.max(Math.ceil(distance / (size * 0.3)), 1);
+        const steps = Math.max(Math.ceil(distance / (size * 0.2)), 1); // Reduced spacing for smoother lines
         
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
@@ -518,6 +519,7 @@
     }
 
     function render() {
+        gl.clear(gl.COLOR_BUFFER_BIT); // Clear the canvas before redrawing all points
         if (positions.length === 0) return;
 
         gl.useProgram(program);
