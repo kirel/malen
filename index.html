@@ -69,6 +69,53 @@
         display: block;
     }
 
+    #brushSizeControl {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.7); /* Slightly transparent */
+        padding: 10px;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+    }
+
+    #brushSizeSlider {
+        width: 120px; /* Adjust width for mobile */
+        -webkit-appearance: none; /* Remove default slider styles */
+        height: 8px;
+        background: #d3d3d3;
+        outline: none;
+        opacity: 0.7;
+        -webkit-transition: .2s;
+        transition: opacity .2s;
+        border-radius: 5px;
+    }
+
+    #brushSizeSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px; /* Larger thumb for touch */
+        height: 20px;
+        border-radius: 50%;
+        background: #4CAF50; /* Green thumb */
+        cursor: grab;
+    }
+
+    #brushSizeSlider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #4CAF50;
+        cursor: grab;
+    }
+
+    #brushSizeSlider:hover {
+        opacity: 1;
+    }
+
     .color-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -219,6 +266,10 @@
     </div>
 </div>
 
+<div id="brushSizeControl">
+    <input type="range" id="brushSizeSlider" min="1" max="50" value="8">
+</div>
+
 <button id="clearButton">🗑️</button>
 
 <div id="deleteCountdown"></div>
@@ -235,6 +286,7 @@
     const colorButton = document.getElementById('colorButton');
     const clearButton = document.getElementById('clearButton');
     const deleteCountdown = document.getElementById('deleteCountdown');
+    const brushSizeSlider = document.getElementById('brushSizeSlider');
 
     let currentColor = { r: 1.0, g: 0.0, b: 0.0 };
     let isDrawing = false;
@@ -242,6 +294,7 @@
     let lastY = 0;
     let lastTime = 0;
     let currentLineWidth = 8;
+    let baseBrushSize = 8; // Default brush size
     let deleteTimer = null;
     let deleteCountdownInterval = null;
 
@@ -373,6 +426,10 @@
         });
     });
 
+    brushSizeSlider.addEventListener('input', (e) => {
+        baseBrushSize = parseInt(e.target.value);
+    });
+
     function startDeleteCountdown() {
         let countdown = 3;
         deleteCountdown.textContent = `Löschen in ${countdown}`;
@@ -498,7 +555,8 @@
         lastX = x;
         lastY = y;
         lastTime = Date.now();
-        currentLineWidth = 8;
+        // Initialize with a proportional minimum, but never less than 2px
+        currentLineWidth = Math.max(2, baseBrushSize * 0.2); 
         
         addPoint(x, y, currentLineWidth);
         render();
@@ -517,12 +575,15 @@
         const distance = Math.sqrt(Math.pow(x - lastX, 2) + Math.pow(y - lastY, 2));
         const speed = distance / timeDelta;
         
-        const minWidth = 4;
-        const maxWidth = 20;
+        // Calculate min width as a proportion of baseBrushSize, but never less than 2px
+        const actualMinWidthForSpeed = Math.max(2, baseBrushSize * 0.2); 
+        const actualMaxWidth = baseBrushSize;
         const speedFactor = Math.min(speed / 1.5, 1);
-        const targetWidth = minWidth + (maxWidth - minWidth) * speedFactor;
+        const targetWidth = actualMinWidthForSpeed + (actualMaxWidth - actualMinWidthForSpeed) * speedFactor;
         
         currentLineWidth = currentLineWidth * 0.8 + targetWidth * 0.2;
+        // Clamp currentLineWidth to ensure it stays within the defined min/max for the current baseBrushSize
+        currentLineWidth = Math.max(actualMinWidthForSpeed, Math.min(actualMaxWidth, currentLineWidth));
         
         drawLine(lastX, lastY, x, y, currentLineWidth);
         render();
