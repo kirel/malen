@@ -145,6 +145,46 @@ When modifying the application:
 4. Touch handling: Add event listeners with `{ passive: false }` to prevent default
 5. Performance: Use WebGL buffers efficiently; avoid recreating arrays unnecessarily
 
+## PWA Configuration for Subdirectory Hosting
+
+When deploying a PWA to a subdirectory (e.g., GitHub Pages at `username.github.io/repo/`),特别注意以下配置：
+
+### Critical Configuration (manifest.json)
+```json
+{
+  "start_url": "/repo/",        // Must include subdirectory
+  "scope": "/repo/",            // Must match start_url
+  "icons": [
+    {
+      "src": "icon-192.png",    // Relative path (no leading slash)
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+```
+
+### Critical Configuration (index.html)
+```html
+<link rel="manifest" href="manifest.json">        <!-- No leading slash -->
+<link rel="apple-touch-icon" href="icon-180.png"> <!-- No leading slash -->
+```
+
+**Why this matters:**
+- Leading slash `/icon.png` resolves to `domain.com/icon.png` (root)
+- No leading slash `icon.png` resolves to `domain.com/repo/icon.png` (relative)
+- Same applies to `start_url` and `scope`
+
+### Fix Applied (2025-12-06)
+Updated icon paths and manifest to support subdirectory hosting:
+- Removed leading slashes from all icon paths in `<head>` section
+- Updated `start_url` from `"/"` to `"/malen/"`
+- Updated `scope` from `"/"` to `"/malen/"`
+
+This fixes:
+- PWA icons not displaying when adding to home screen
+- PWA opening at root domain instead of subdirectory
+
 ## Existing Documentation
 
 - `AGENTS.md`: Provides basic project overview and development workflow
