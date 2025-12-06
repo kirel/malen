@@ -2,12 +2,12 @@
   "name": "Malen - Drawing App",
   "short_name": "Malen",
   "description": "A simple web-based drawing application with WebGL rendering",
-  "start_url": "/",
+  "start_url": "/malen/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ff4444",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/malen/",
   "icons": [
     {
       "src": "icon-180.png",
