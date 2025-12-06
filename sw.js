@@ -1,9 +1,21 @@
-const CACHE_NAME = 'malen-drawing-app-v1';
+const CACHE_NAME = 'malen-drawing-app-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.png'
+  '/logo.png',
+  '/favicon.ico',
+  '/icon-180.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/splash/apple-touch-startup-image-750x1334.png',
+  '/splash/apple-touch-startup-image-1170x2532.png',
+  '/splash/apple-touch-startup-image-1290x2796.png',
+  '/splash/apple-touch-startup-image-1334x750.png',
+  '/splash/apple-touch-startup-image-2048x2732.png',
+  '/splash/apple-touch-startup-image-2532x1170.png',
+  '/splash/apple-touch-startup-image-2732x2048.png',
+  '/splash/apple-touch-startup-image-2796x1290.png'
 ];
 
 // Install event - cache resources
