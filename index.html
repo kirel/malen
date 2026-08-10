@@ -289,11 +289,8 @@
     const brushSizeSlider = document.getElementById('brushSizeSlider');
 
     let currentColor = { r: 1.0, g: 0.0, b: 0.0 };
-    let isDrawing = false;
-    let lastX = 0;
-    let lastY = 0;
-    let lastTime = 0;
-    let currentLineWidth = 8;
+    // Per-finger state for real multitouch. Each entry: { lastX, lastY, lastTime, currentLineWidth, isDrawing, startTime }
+    const activeStrokes = new Map();
     let baseBrushSize = 25; // Default brush size
     let deleteTimer = null;
     let deleteCountdownInterval = null;
@@ -546,58 +543,103 @@
 
     function startDrawing(e) {
         if (e.target !== canvas) return;
-        
+
         e.preventDefault();
-        isDrawing = true;
-        
+        const points = getEventPoints(e);
         const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        
-        lastX = x;
-        lastY = y;
-        lastTime = Date.now();
-        // Initialize with a proportional minimum, but never less than 2px
-        currentLineWidth = Math.max(2, baseBrushSize * 0.2); 
-        
-        addPoint(x, y, currentLineWidth);
+        const now = Date.now();
+        const minWidth = Math.max(2, baseBrushSize * 0.2);
+
+        for (const point of points) {
+            // Skip the clear button's own multi-touch; the button has its own listeners.
+            if (point.target !== canvas) continue;
+            if (activeStrokes.has(point.id)) continue;
+            const x = point.x - rect.left;
+            const y = point.y - rect.top;
+            activeStrokes.set(point.id, {
+                lastX: x,
+                lastY: y,
+                lastTime: now,
+                currentLineWidth: minWidth,
+                startTime: now,
+            });
+            addPoint(x, y, minWidth);
+        }
         render();
     }
 
     function draw(e) {
-        if (!isDrawing) return;
         e.preventDefault();
-        
+        if (activeStrokes.size === 0) return;
+
+        const points = getEventPoints(e);
         const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        
+        const minWidth = Math.max(2, baseBrushSize * 0.2);
+        const maxWidth = baseBrushSize;
         const now = Date.now();
-        const timeDelta = Math.max(now - lastTime, 1);
-        const distance = Math.sqrt(Math.pow(x - lastX, 2) + Math.pow(y - lastY, 2));
-        const speed = distance / timeDelta;
-        
-        // Calculate min width as a proportion of baseBrushSize, but never less than 2px
-        const actualMinWidthForSpeed = Math.max(2, baseBrushSize * 0.2); 
-        const actualMaxWidth = baseBrushSize;
-        const speedFactor = Math.min(speed / 1.5, 1);
-        const targetWidth = actualMinWidthForSpeed + (actualMaxWidth - actualMinWidthForSpeed) * speedFactor;
-        
-        currentLineWidth = currentLineWidth * 0.8 + targetWidth * 0.2;
-        // Clamp currentLineWidth to ensure it stays within the defined min/max for the current baseBrushSize
-        currentLineWidth = Math.max(actualMinWidthForSpeed, Math.min(actualMaxWidth, currentLineWidth));
-        
-        drawLine(lastX, lastY, x, y, currentLineWidth);
+
+        for (const point of points) {
+            const stroke = activeStrokes.get(point.id);
+            if (!stroke) continue;
+            const x = point.x - rect.left;
+            const y = point.y - rect.top;
+
+            const timeDelta = Math.max(now - stroke.lastTime, 1);
+            const distance = Math.sqrt(Math.pow(x - stroke.lastX, 2) + Math.pow(y - stroke.lastY, 2));
+            const speed = distance / timeDelta;
+
+            const speedFactor = Math.min(speed / 1.5, 1);
+            const targetWidth = minWidth + (maxWidth - minWidth) * speedFactor;
+
+            stroke.currentLineWidth = stroke.currentLineWidth * 0.8 + targetWidth * 0.2;
+            stroke.currentLineWidth = Math.max(minWidth, Math.min(maxWidth, stroke.currentLineWidth));
+
+            drawLine(stroke.lastX, stroke.lastY, x, y, stroke.currentLineWidth);
+            stroke.lastX = x;
+            stroke.lastY = y;
+            stroke.lastTime = now;
+        }
         render();
-        
-        lastX = x;
-        lastY = y;
-        lastTime = now;
     }
 
     function stopDrawing(e) {
         e.preventDefault();
-        isDrawing = false;
+        // Only end the strokes for the identifiers that actually left the surface.
+        // For touchend/touchcancel, e.changedTouches lists the removed fingers.
+        // For mouseup, mouse leaves the canvas, so clear the single synthetic mouse id.
+        const ended = getEndedIdentifiers(e);
+        for (const id of ended) {
+            activeStrokes.delete(id);
+        }
+        // If the event didn't carry identifiers (e.g. browser oddity), keep strokes intact.
+    }
+
+    // Build the list of active pointers for the current event.
+    // Touch events expose multiple touches; mouse events use a synthetic id.
+    function getEventPoints(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            const out = [];
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                out.push({ id: 'touch:' + t.identifier, x: t.clientX, y: t.clientY, target: document.elementFromPoint(t.clientX, t.clientY) || e.target });
+            }
+            return out;
+        }
+        return [{ id: 'mouse', x: e.clientX, y: e.clientY, target: e.target }];
+    }
+
+    // Build the list of pointer identifiers that have ended for this event.
+    function getEndedIdentifiers(e) {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            const out = [];
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                out.push('touch:' + e.changedTouches[i].identifier);
+            }
+            return out;
+        }
+        // Mouse: any mouseup / mouseleave ends the single synthetic mouse stroke.
+        return ['mouse'];
     }
 
     canvas.addEventListener('touchstart', startDrawing, { passive: false });
@@ -625,7 +667,9 @@
     }, { passive: false });
 
     document.addEventListener('touchmove', e => {
-        if (e.touches.length > 1) {
+        // Allow multiple concurrent drawing fingers; only suppress the page-level
+        // pinch/scroll gestures outside the canvas.
+        if (e.target !== canvas && e.touches.length > 1) {
             e.preventDefault();
         }
     }, { passive: false });
